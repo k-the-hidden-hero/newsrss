@@ -13,33 +13,33 @@ from .core.events import lifespan
 from .models.schemas import RSSFeed
 from .services.rss import RSSService
 
-# Type variables per le annotazioni dei decoratori
+# Type variables for decorator annotations
 T = TypeVar("T")
 DecoratedCallable = Callable[..., T]
 
-# Carica la configurazione
+# Load configuration
 config = AppConfig()
 logger = config.logger
 
-# Crea l'applicazione FastAPI
+# Create FastAPI application
 app = FastAPI(
     title="NewsRSS API",
-    description="API per la gestione di feed RSS e la generazione di playlist m3u/m3u8",
+    description="API for managing RSS feeds and generating m3u/m3u8 playlists",
     version="0.1.0",
     lifespan=lifespan,
     debug=config.is_debug(),
 )
 
-# Configura i percorsi statici
+# Configure static paths
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Includi i router
+# Include routers
 app.include_router(home.router)
 app.include_router(playlist.router)
 
 
-# Gestisci i path m3u/m3u8 anche con sottopercorsi
+# Handle m3u/m3u8 paths with subpaths
 @app.get("/m3u/{path:path}")
 async def m3u_catchall(
     path: Annotated[str, Path()],
@@ -47,7 +47,7 @@ async def m3u_catchall(
     feeds: Annotated[list[RSSFeed], Depends(get_rss_feeds)],
     config: Annotated[AppConfig, Depends(get_config)],
 ) -> Response:
-    """Cattura tutti i percorsi che iniziano con /m3u/ e restituisce la playlist."""
+    """Captures all paths that start with /m3u/ and returns the playlist."""
     playlist_content = await playlist._generate_playlist(
         rss_service, feeds, config, format_type="m3u"
     )
@@ -61,7 +61,7 @@ async def m3u8_catchall(
     feeds: Annotated[list[RSSFeed], Depends(get_rss_feeds)],
     config: Annotated[AppConfig, Depends(get_config)],
 ) -> Response:
-    """Cattura tutti i percorsi che iniziano con /m3u8/ e restituisce la playlist."""
+    """Captures all paths that start with /m3u8/ and returns the playlist."""
     playlist_content = await playlist._generate_playlist(
         rss_service, feeds, config, format_type="m3u8"
     )
@@ -75,5 +75,5 @@ if __name__ == "__main__":
     host = os.environ.get("HOST", "0.0.0.0")
     reload = config.is_debug()
 
-    logger.info(f"Avvio del server su {host}:{port} (reload: {reload})")
+    logger.info(f"Starting server on {host}:{port} (reload: {reload})")
     uvicorn.run("newsrss.main:app", host=host, port=port, reload=reload)

@@ -17,7 +17,7 @@ from ..services.rss import RSSService
 router = APIRouter()
 logger = logging.getLogger("newsrss")
 
-# Type variables per le annotazioni dei router
+# Type variables for router annotations
 T = TypeVar("T")
 DecoratedCallable = Callable[..., T]
 
@@ -26,62 +26,62 @@ async def _generate_playlist(
     rss_service: RSSService, feeds: list[RSSFeed], config: Any, format_type: str = "m3u"
 ) -> str:
     """
-    Genera una playlist in formato m3u o m3u8.
+    Generate a playlist in m3u or m3u8 format.
 
     Args:
-        rss_service: Servizio RSS per recuperare gli episodi
-        feeds: Lista dei feed RSS da cui recuperare gli episodi
-        config: Configurazione dell'applicazione
-        format_type: Tipo di formato della playlist (m3u o m3u8)
+        rss_service: RSS service to retrieve episodes
+        feeds: List of RSS feeds to retrieve episodes from
+        config: Application configuration
+        format_type: Playlist format type (m3u or m3u8)
 
     Returns:
-        str: Playlist in formato m3u o m3u8
+        str: Playlist in m3u or m3u8 format
     """
-    # Inizia con l'intestazione della playlist
+    # Start with playlist header
     if format_type == "m3u8":
         playlist_lines = ["#EXTM3U"]
     else:
         playlist_lines = ["#EXTM3U"]
 
-    # Se non ci sono feed, restituisci solo l'intestazione
+    # If there are no feeds, return just the header
     if not feeds:
-        logger.warning("Nessun feed configurato per la generazione della playlist")
-        # Aggiungi un commento per indicare che non ci sono feed
-        playlist_lines.append("#EXTINF:0,Nessun feed configurato")
+        logger.warning("No feeds configured for playlist generation")
+        # Add a comment to indicate there are no feeds
+        playlist_lines.append("#EXTINF:0,No feeds configured")
         playlist_lines.append("http://localhost/dummy.mp3")
         return "\n".join(playlist_lines)
 
-    # Prepara i task per recuperare gli episodi da ogni feed
+    # Prepare tasks to retrieve episodes from each feed
     tasks = []
     for feed in feeds:
         tasks.append(asyncio.create_task(rss_service.fetch_feed(feed)))
 
-    # Attendi il completamento di tutti i task con timeout
+    # Wait for all tasks to complete with timeout
     max_time = config.get_max_scrape_time()
     done, pending = await asyncio.wait(
         tasks, timeout=max_time, return_when=asyncio.ALL_COMPLETED
     )
 
-    # Cancella i task rimanenti
+    # Cancel remaining tasks
     for task in pending:
         task.cancel()
 
-    # Verifica se abbiamo aggiunto almeno un episodio
+    # Check if we've added at least one episode
     episodes_added = False
 
-    # Ora recupera gli episodi più recenti per ogni feed, rispettando l'ordine dei feed
+    # Now retrieve the latest episodes for each feed, respecting the feed order
     for i, feed in enumerate(feeds):
         try:
             episode = await rss_service.get_latest_episode(feed)
             if episode:
-                # Formatta la durata in un formato leggibile (minuti:secondi)
+                # Format duration in a readable format (minutes:seconds)
                 if format_type == "m3u8":
-                    # Formato per m3u8
+                    # Format for m3u8
                     playlist_lines.append(
                         f"#EXTINF:{episode.duration},{feed.name} - {episode.title}"
                     )
                 else:
-                    # Formato per m3u standard
+                    # Format for standard m3u
                     playlist_lines.append(
                         f"#EXTINF:{episode.duration},{feed.name} - {episode.title}"
                     )
@@ -89,17 +89,15 @@ async def _generate_playlist(
                 episodes_added = True
         except Exception as e:
             feed_name = feed.name if i < len(feeds) else f"feed {i}"
-            logger.error(
-                f"Errore nel recupero degli episodi per il feed {feed_name}: {e}"
-            )
+            logger.error(f"Error retrieving episodes for feed {feed_name}: {e}")
 
-    # Se non è stato aggiunto nessun episodio, aggiungi un dummy
+    # If no episodes were added, add a dummy
     if not episodes_added:
-        logger.warning("Nessun episodio trovato per i feed configurati")
-        playlist_lines.append("#EXTINF:0,Nessun episodio trovato")
+        logger.warning("No episodes found for configured feeds")
+        playlist_lines.append("#EXTINF:0,No episodes found")
         playlist_lines.append("http://localhost/dummy.mp3")
 
-    # Unisci le linee della playlist
+    # Join playlist lines
     playlist_content = "\n".join(playlist_lines)
     return playlist_content
 
@@ -110,7 +108,7 @@ async def get_m3u(
     feeds: list[RSSFeed] = rss_feeds_dependency,
     config: Any = config_dependency,
 ) -> Response:
-    """Genera una playlist m3u."""
+    """Generate an m3u playlist."""
     playlist_content = await _generate_playlist(
         rss_service, feeds, config, format_type="m3u"
     )
@@ -124,7 +122,7 @@ async def get_m3u_with_path(
     feeds: list[RSSFeed] = rss_feeds_dependency,
     config: Any = config_dependency,
 ) -> Response:
-    """Genera una playlist m3u indipendentemente dal percorso richiesto dopo /m3u/."""
+    """Generate an m3u playlist regardless of the requested path after /m3u/."""
     return await get_m3u(rss_service, feeds, config)
 
 
@@ -134,7 +132,7 @@ async def get_m3u8(
     feeds: list[RSSFeed] = rss_feeds_dependency,
     config: Any = config_dependency,
 ) -> Response:
-    """Genera una playlist m3u8."""
+    """Generate an m3u8 playlist."""
     playlist_content = await _generate_playlist(
         rss_service, feeds, config, format_type="m3u8"
     )
@@ -148,5 +146,5 @@ async def get_m3u8_with_path(
     feeds: list[RSSFeed] = rss_feeds_dependency,
     config: Any = config_dependency,
 ) -> Response:
-    """Genera una playlist m3u8 indipendentemente dal percorso richiesto dopo /m3u8/."""
+    """Generate an m3u8 playlist regardless of the requested path after /m3u8/."""
     return await get_m3u8(rss_service, feeds, config)

@@ -1,5 +1,5 @@
 [default]
-# Configurazione base
+# Base configuration
 debug = true
 log_level = "DEBUG"
 max_scrape_time = 60

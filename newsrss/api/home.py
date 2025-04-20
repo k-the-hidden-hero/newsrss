@@ -17,7 +17,7 @@ from ..services.rss import RSSService
 
 router = APIRouter()
 
-# Type variables per le annotazioni dei router
+# Type variables for router annotations
 T = TypeVar("T")
 DecoratedCallable = Callable[..., T]
 
@@ -30,39 +30,39 @@ async def home(
     templates: Jinja2Templates = templates_dependency,
     config: Any = config_dependency,
 ) -> HTMLResponse:
-    """Endpoint principale che mostra la pagina HTML con le statistiche."""
-    # Recupera le statistiche di scraping per ogni feed
+    """Main endpoint that displays the HTML page with statistics."""
+    # Retrieve scraping statistics for each feed
     feeds_stats = []
 
-    # Crea una lista di task per i feed che non hanno statistiche
+    # Create a list of tasks for feeds that don't have statistics
     tasks = []
     feeds_to_scrape = []
 
     for feed in feeds:
         stats = rss_service.get_scrape_stats(feed.id)
         if not stats:
-            # Non ci sono statistiche, dobbiamo fare lo scraping
+            # No statistics, we need to scrape
             task = asyncio.create_task(rss_service.fetch_feed(feed))
             tasks.append(task)
             feeds_to_scrape.append(feed)
 
-    # Se ci sono feed da scrapare, attendiamo il completamento
+    # If there are feeds to scrape, wait for completion
     if tasks:
-        # Usa asyncio.wait con timeout per limitare il tempo di attesa
+        # Use asyncio.wait with timeout to limit waiting time
         max_time = config.get_max_scrape_time()
         done, pending = await asyncio.wait(
             tasks, timeout=max_time, return_when=asyncio.ALL_COMPLETED
         )
 
-        # Cancella i task rimanenti
+        # Cancel remaining tasks
         for task in pending:
             task.cancel()
 
-    # Ora ottieni le statistiche aggiornate
+    # Now get updated statistics
     for feed in feeds:
         stats = rss_service.get_scrape_stats(feed.id)
 
-        # Ottieni anche il primo episodio per avere informazioni aggiuntive
+        # Also get the first episode for additional information
         latest_episode = None
         if stats and stats.success:
             latest_episode = await rss_service.get_latest_episode(feed)
@@ -78,9 +78,9 @@ async def home(
             "success": stats.success if stats else False,
         }
 
-        # Aggiungi informazioni supplementari sull'episodio se disponibili
+        # Add supplementary information about the episode if available
         if latest_episode:
-            # Formatta la durata in un formato leggibile (minuti:secondi)
+            # Format duration in a readable format (minutes:seconds)
             minutes = latest_episode.duration // 60
             seconds = latest_episode.duration % 60
             duration_str = f"{minutes}:{seconds:02d}"
@@ -88,9 +88,9 @@ async def home(
             feed_data["episode_url"] = str(latest_episode.url)
             feed_data["episode_duration"] = duration_str
 
-            # Cerca di ottenere l'autore dall'episodio
-            # (potrebbe essere necessario aggiungere questo campo al modello Episode)
-            # Per ora utilizziamo il nome del feed come fallback
+            # Try to get the author from the episode
+            # (it might be necessary to add this field to the Episode model)
+            # For now we use the feed name as fallback
             feed_data["episode_author"] = getattr(latest_episode, "author", feed.name)
 
         feeds_stats.append(feed_data)
@@ -104,47 +104,47 @@ async def home(
 async def refresh(
     feed_id: int | None = Query(
         None,
-        description="ID del feed specifico da aggiornare, "
-        "se omesso aggiorna tutti i feed",
+        description="ID of the specific feed to update, "
+        "if omitted updates all feeds",
     ),
     feeds: list[RSSFeed] = rss_feeds_dependency,
     rss_service: RSSService = rss_service_dependency,
     config: Any = config_dependency,
 ) -> dict[str, Any]:
-    """Forza lo scraping dei feed e restituisce le statistiche aggiornate."""
-    # Se è stato specificato un feed_id, filtra solo quel feed
+    """Force scraping of feeds and returns updated statistics."""
+    # If a feed_id was specified, filter only that feed
     if feed_id is not None:
         feeds_to_scrape = [feed for feed in feeds if feed.id == feed_id]
     else:
         feeds_to_scrape = feeds
 
-    # Crea task per ogni feed da scrapare
+    # Create tasks for each feed to scrape
     tasks = [
         asyncio.create_task(rss_service.fetch_feed(feed)) for feed in feeds_to_scrape
     ]
 
-    # Attendi il completamento con timeout
+    # Wait for completion with timeout
     if tasks:
         max_time = config.get_max_scrape_time()
         done, pending = await asyncio.wait(
             tasks, timeout=max_time, return_when=asyncio.ALL_COMPLETED
         )
 
-        # Cancella i task rimanenti
+        # Cancel remaining tasks
         for task in pending:
             task.cancel()
 
-    # Prepara i dati di risposta per tutti i feed
+    # Prepare response data for all feeds
     feeds_stats = []
     for feed in feeds:
         stats = rss_service.get_scrape_stats(feed.id)
 
-        # Converti la data in stringa per la serializzazione JSON
+        # Convert date to string for JSON serialization
         last_scrape_str = (
             stats.last_scrape.isoformat() if stats and stats.last_scrape else None
         )
 
-        # Ottieni anche il primo episodio per avere informazioni aggiuntive
+        # Also get the first episode for additional information
         latest_episode = None
         if stats and stats.success:
             latest_episode = await rss_service.get_latest_episode(feed)
@@ -160,9 +160,9 @@ async def refresh(
             "success": stats.success if stats else False,
         }
 
-        # Aggiungi informazioni supplementari sull'episodio se disponibili
+        # Add supplementary information about the episode if available
         if latest_episode:
-            # Formatta la durata in un formato leggibile (minuti:secondi)
+            # Format duration in a readable format (minutes:seconds)
             minutes = latest_episode.duration // 60
             seconds = latest_episode.duration % 60
             duration_str = f"{minutes}:{seconds:02d}"
@@ -170,18 +170,18 @@ async def refresh(
             feed_data["episode_url"] = str(latest_episode.url)
             feed_data["episode_duration"] = duration_str
 
-            # Cerca di ottenere l'autore dall'episodio
-            # (potrebbe essere necessario aggiungere questo campo al modello Episode)
-            # Per ora utilizziamo il nome del feed come fallback
+            # Try to get the author from the episode
+            # (it might be necessary to add this field to the Episode model)
+            # For now we use the feed name as fallback
             feed_data["episode_author"] = getattr(latest_episode, "author", feed.name)
 
         feeds_stats.append(feed_data)
 
-    # Creo un messaggio variabile a seconda del tipo di aggiornamento
-    update_message = "tutti i feed" if feed_id is None else f"feed id {feed_id}"
+    # Create a variable message depending on the type of update
+    update_message = "all feeds" if feed_id is None else f"feed id {feed_id}"
 
     return {
         "status": "success",
-        "message": f"Aggiornati {update_message}",
+        "message": f"Updated {update_message}",
         "feeds": feeds_stats,
     }

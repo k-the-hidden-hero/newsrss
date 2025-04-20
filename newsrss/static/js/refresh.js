@@ -1,5 +1,5 @@
 /**
- * Gestisce l'aggiornamento dei feed RSS
+ * Manages the RSS feeds refresh
  */
 document.addEventListener('DOMContentLoaded', function() {
     const refreshAllButton = document.getElementById('refresh-all');
@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingOverlay = document.getElementById('loading-overlay');
     const notification = document.getElementById('notification');
 
-    // Gestione click sul pulsante "Aggiorna tutti i feed"
+    // Handle click on "Refresh all feeds" button
     if (refreshAllButton) {
         refreshAllButton.addEventListener('click', function() {
             refreshAllButton.classList.add('btn-loading');
@@ -24,26 +24,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 refreshAllButton.classList.remove('btn-loading');
                 loadingOverlay.style.display = 'none';
 
-                // Aggiornamento delle informazioni sui feed
+                // Update feed information
                 if (data.feeds && data.feeds.length > 0) {
                     data.feeds.forEach(feed => {
                         updateFeedCard(feed);
                     });
-                    showNotification('Tutti i feed sono stati aggiornati con successo!', 'success');
+                    showNotification('All feeds have been successfully updated!', 'success');
                 } else {
-                    showNotification('Nessun feed aggiornato.', 'error');
+                    showNotification('No feeds updated.', 'error');
                 }
             })
             .catch(error => {
-                console.error('Errore:', error);
+                console.error('Error:', error);
                 refreshAllButton.classList.remove('btn-loading');
                 loadingOverlay.style.display = 'none';
-                showNotification('Si è verificato un errore durante l\'aggiornamento dei feed.', 'error');
+                showNotification('An error occurred while updating the feeds.', 'error');
             });
         });
     }
 
-    // Gestione click sui pulsanti "Aggiorna" individuali
+    // Handle click on individual "Refresh" buttons
     refreshButtons.forEach(button => {
         button.addEventListener('click', function() {
             const feedId = this.getAttribute('data-feed-id');
@@ -62,32 +62,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 button.classList.remove('btn-loading');
 
                 if (data.status === 'success') {
-                    // Trova il feed aggiornato dall'array di feed
+                    // Find the updated feed from the feeds array
                     const updatedFeed = data.feeds.find(f => f.feed_id == feedId);
                     if (updatedFeed) {
                         updateFeedCard(updatedFeed);
-                        showNotification('Feed aggiornato con successo!', 'success');
+                        showNotification('Feed successfully updated!', 'success');
                     } else {
-                        showNotification('Impossibile trovare i dati aggiornati del feed.', 'error');
+                        showNotification('Could not find updated feed data.', 'error');
                     }
                 } else {
-                    showNotification('Errore durante l\'aggiornamento del feed.', 'error');
+                    showNotification('Error updating feed.', 'error');
                 }
             })
             .catch(error => {
-                console.error('Errore:', error);
+                console.error('Error:', error);
                 button.classList.remove('btn-loading');
-                showNotification('Si è verificato un errore durante l\'aggiornamento del feed.', 'error');
+                showNotification('An error occurred while updating the feed.', 'error');
             });
         });
     });
 
-    // Funzione per aggiornare i dati di una card feed
+    // Function to update feed card data
     function updateFeedCard(feed) {
         const feedCard = document.querySelector(`.feed-card[data-feed-id="${feed.feed_id}"]`);
         if (!feedCard) return;
 
-        // Aggiorna le informazioni di base
+        // Update basic information
         const lastScrapeEl = feedCard.querySelector('.last-scrape');
         if (lastScrapeEl) {
             lastScrapeEl.textContent = feed.last_scrape || '';
@@ -100,11 +100,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const statusElement = feedCard.querySelector('.status');
         if (statusElement) {
-            statusElement.textContent = feed.success ? '✅ Successo' : '❌ Fallimento';
+            statusElement.textContent = feed.success ? '✅ Success' : '❌ Failure';
             statusElement.className = `status ml-1 ${feed.success ? 'text-green-400' : 'text-red-400'}`;
         }
 
-        // Aggiorna le informazioni sull'ultimo episodio
+        // Update latest episode information
         const latestEpisode = feedCard.querySelector('.latest-episode');
         if (!latestEpisode) return;
 
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 episodeTitleEl.textContent = feed.last_episode;
             }
 
-            // Aggiorna durata episodio
+            // Update episode duration
             const durationBadge = feedCard.querySelector('.duration-badge');
             if (durationBadge) {
                 if (feed.episode_duration) {
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Aggiorna autore episodio
+            // Update episode author
             const authorContainer = feedCard.querySelector('.episode-author-container');
             const authorElement = feedCard.querySelector('.episode-author');
             if (authorContainer && authorElement) {
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Aggiorna URL episodio
+            // Update episode URL
             const urlContainer = feedCard.querySelector('.episode-url-container');
             const urlElement = feedCard.querySelector('.episode-url');
             if (urlContainer && urlElement) {
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Funzione per mostrare notifiche
+    // Function to show notifications
     function showNotification(message, type) {
         if (!notification) return;
 

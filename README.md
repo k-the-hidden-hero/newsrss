@@ -1,169 +1,119 @@
 # NewsM3U
 
-![Build and Release](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/build-and-release.yml/badge.svg)
-![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/k-the-hidden-hero/newsm3u)
+[![Code Quality](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/code-quality.yml/badge.svg)](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/code-quality.yml)
+[![Build and Release](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/build-and-release.yml)
+[![License: WTFPL](https://img.shields.io/badge/License-WTFPL-brightgreen.svg)](http://www.wtfpl.net/about/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/k-the-hidden-hero/newsm3u)](https://github.com/k-the-hidden-hero/newsm3u/pkgs/container/newsm3u)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-311/)
 
-Un'API che fornisce playlist M3U e M3U8 sempre aggiornate di file audio da feed RSS. Progettata per essere eseguita in ambienti containerizzati come Kubernetes o Cloud Run.
 
-## Funzionalità
+An API that provides always up-to-date M3U and M3U8 playlists of audio files from RSS feeds. Designed to run in containerized environments such as Kubernetes or Cloud Run.
 
-- API REST basata su FastAPI
-- Genera playlist M3U e M3U8 da feed RSS multipli
-- Dashboard web con statistiche sui feed
-- Configurazione flessibile tramite TOML o variabili d'ambiente
-- Perfettamente containerizzata e ottimizzata per ambienti cloud
+## Features
 
-## Immagine Container
+- REST API based on FastAPI
+- Generates M3U and M3U8 playlists from multiple RSS feeds
+- Web dashboard with feed statistics
+- Flexible configuration via TOML or environment variables
+- Fully containerized and optimized for cloud environments
 
-L'immagine container è disponibile su GitHub Container Registry:
+## Container Image
+
+The container image is available on GitHub Container Registry:
 
 ```bash
 docker pull ghcr.io/k-the-hidden-hero/newsm3u:latest
 ```
 
-### Tag disponibili
+### Available Tags
 
-- `latest`: ultima versione stabile rilasciata
-- `x.y.z`: versione specifica (es. `1.0.0`)
-- `devel`: versione di sviluppo (dal branch development)
-- `prerelease`: ultima pre-release
+- `latest`: latest stable release
+- `x.y.z`: specific version (e.g. `1.0.0`)
+- `devel`: development version (from development branch)
+- `prerelease`: latest pre-release
 
-## Utilizzo Rapido
+## Quick Usage
 
 ```bash
 docker run -p 8000:8000 -v /path/to/config.toml:/app/config.toml ghcr.io/k-the-hidden-hero/newsm3u:latest
 ```
 
-## Configurazione
+## Configuration
 
-L'applicazione può essere configurata tramite file TOML o variabili d'ambiente.
+The application can be configured using a TOML file or environment variables.
 
-### Esempio di configurazione TOML
+### TOML Configuration Example
 
 ```toml
-[app]
-debug = true
-max_timeout = 30
-retry_count = 3
-scrape_timeout = 20
+# Base configuration
+debug = false
+log_level = "info"
+max_scrape_time = 60
+max_retries = 5
+scrape_timeout = 40
 
-[[feeds]]
+# RSS feeds configuration
+[[rss_feeds]]
 id = 1
-name = "Radio RAI 1"
-description = "Giornale Radio RAI 1"
-url = "https://www.raiplaysound.it/programmi/gr1.xml"
-timeout = 15
+name = "Radio24 News"
+description = "Radio 24 News"
+url = "https://www.spreaker.com/show/4311383/episodes/feed"
+timeout = 40
 
-[[feeds]]
-id = 2
-name = "Radio RAI 2"
-description = "Giornale Radio RAI 2"
-url = "https://www.raiplaysound.it/programmi/gr2.xml"
-timeout = 15
+[[rss_feeds]]
+id = 4
+name = "RTL 102.5"
+description = "RTL 102.5 Hourly News"
+url = "https://rss.rtl.it/podcast/giornale-orario/?mediaType=201"
+timeout = 40
+
+[[rss_feeds]]
+id = 5
+name = "Radio Capital News"
+description = "Capital News Hourly Report"
+url = "https://www.capital.it/api/pub/v1/rss/google-assistant/833%22%20type=%22rss%22%20text=%22Capital%20News%20GR%22"
+timeout = 40
+
 ```
 
-### Variabili d'Ambiente
+### Environment Variables
 
-- `NEWSRSS_DEBUG`: abilita il logging di debug
-- `NEWSRSS_MAX_TIMEOUT`: timeout massimo per la generazione delle playlist (secondi)
-- `NEWSRSS_RETRY_COUNT`: numero massimo di tentativi per il recupero dei feed
-- `NEWSRSS_SCRAPE_TIMEOUT`: timeout per il recupero di un singolo feed (secondi)
-- `NEWSRSS_CONFIG_PATH`: percorso del file di configurazione TOML
+- `NEWSRSS_DEBUG`: enables debug logging
+- `NEWSRSS_MAX_TIMEOUT`: maximum timeout for playlist generation (seconds)
+- `NEWSRSS_RETRY_COUNT`: maximum number of retry attempts for feed retrieval
+- `NEWSRSS_SCRAPE_TIMEOUT`: timeout for retrieving a single feed (seconds)
+- `NEWSRSS_CONFIG_PATH`: path to the TOML configuration file
 
-## Endpoints API
+## API Endpoints
 
-- `/`: Dashboard web con statistiche sui feed RSS
-- `/m3u` o `/m3u/*`: Restituisce la playlist in formato M3U
-- `/m3u8` o `/m3u8/*`: Restituisce la playlist in formato M3U8
+- `/`: Web dashboard with RSS feed statistics
+- `/m3u` or `/m3u/*`: Returns the playlist in M3U format
+- `/m3u8` or `/m3u8/*`: Returns the playlist in M3U8 format
 
-## Sviluppo
+## Development
 
-### Prerequisiti
+### Prerequisites
 
 - Python 3.11+
 - Poetry
-- Node.js e npm (per Tailwind CSS)
+- Node.js and npm (for Tailwind CSS)
 
-### Setup dell'ambiente di sviluppo
+### Development Environment Setup
 
 ```bash
-# Clona il repository
+# Clone the repository
 git clone https://github.com/k-the-hidden-hero/newsm3u.git
 cd newsm3u
 
-# Installa le dipendenze con Poetry
+# Install dependencies with Poetry
 poetry install
 
-# Installa le dipendenze npm per Tailwind CSS
+# Install npm dependencies for Tailwind CSS
 npm install
 
-# Compila il CSS
+# Compile CSS
 npm run build:css
 
-# Avvia l'applicazione in modalità sviluppo
+# Start the application in development mode
 poetry run uvicorn newsrss.main:app --reload
 ```
-
-### Skaffold per sviluppo Kubernetes
-
-```bash
-skaffold dev
-```
-
-## Licenza
-
-MIT
-
-## Controlli di Qualità del Codice
-
-Per garantire la qualità e la sicurezza del codice, questo progetto utilizza diversi strumenti automatizzati:
-
-### Strumenti di Formattazione e Linting
-
-- **Black**: Formattatore automatico del codice Python
-- **isort**: Organizzazione automatica delle importazioni
-- **Ruff**: Linter Python veloce che include regole da Flake8, Pylint e altri
-- **mypy**: Controllo statico dei tipi in Python
-
-### Sicurezza
-
-- **Gitleaks**: Scansione del repository per individuare eventuali credenziali o token esposti
-
-### Come Utilizzare gli Strumenti
-
-1. **Installazione delle dipendenze di sviluppo**:
-   ```bash
-   poetry install --with dev
-   ```
-
-2. **Attivazione di pre-commit**:
-   ```bash
-   pre-commit install
-   ```
-
-3. **Esecuzione manuale dei controlli**:
-   ```bash
-   # Formattazione con Black
-   black .
-
-   # Organizzazione delle importazioni
-   isort .
-
-   # Linting con Ruff
-   ruff check .
-
-   # Controllo dei tipi
-   mypy newsrss
-
-   # Scansione di sicurezza
-   gitleaks detect
-   ```
-
-4. **Workflow CI/CD**:
-   Questi controlli vengono eseguiti automaticamente su GitHub Actions ad ogni push o pull request.
-
-### Configurazione
-
-- Le configurazioni di tutti gli strumenti si trovano nel file `pyproject.toml`
-- La configurazione di pre-commit è definita in `.pre-commit-config.yaml`
-- Le regole personalizzate per Gitleaks sono definite in `.gitleaks.toml`
