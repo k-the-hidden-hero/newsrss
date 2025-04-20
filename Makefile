@@ -23,8 +23,6 @@ help:
 	@echo "  $(YELLOW)format$(NC)      - Formatta il codice con Black e isort"
 	@echo "  $(YELLOW)typecheck$(NC)   - Esegue il controllo statico dei tipi con mypy"
 	@echo "  $(YELLOW)security$(NC)    - Esegue la scansione di sicurezza con Gitleaks"
-	@echo "  $(YELLOW)test$(NC)        - Esegue i test con pytest"
-	@echo "  $(YELLOW)coverage$(NC)    - Genera il report di copertura dei test"
 	@echo "  $(YELLOW)quality$(NC)     - Esegue tutti i controlli di qualità"
 	@echo "  $(YELLOW)clean$(NC)       - Rimuove file generati e cache"
 
@@ -50,16 +48,6 @@ typecheck:
 security:
 	@echo "$(GREEN)Scansione di sicurezza con Gitleaks...$(NC)"
 	$(POETRY) run gitleaks detect
-
-test:
-	@echo "$(GREEN)Esecuzione test con pytest...$(NC)"
-	$(POETRY) run pytest
-
-coverage:
-	@echo "$(GREEN)Generazione report di copertura...$(NC)"
-	$(POETRY) run pytest --cov=$(PROJECT_NAME) tests/
-	$(POETRY) run pytest --cov=$(PROJECT_NAME) --cov-report=html tests/
-	@echo "$(GREEN)Report HTML generato nella directory htmlcov/$(NC)"
 
 quality: lint typecheck security test
 	@echo "$(GREEN)Tutti i controlli di qualità completati!$(NC)"
