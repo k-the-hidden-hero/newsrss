@@ -2,13 +2,16 @@ import os
 from collections.abc import Callable
 from typing import Annotated, TypeVar
 
-from fastapi import FastAPI, Path
-from fastapi.responses import Response
+from fastapi import Depends, FastAPI, Path
+from fastapi.responses import PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .api import home, playlist
 from .core.config import AppConfig
+from .core.dependencies import get_config, get_rss_feeds, get_rss_service
 from .core.events import lifespan
+from .models.schemas import RSSFeed
+from .services.rss import RSSService
 
 # Type variables per le annotazioni dei decoratori
 T = TypeVar("T")
@@ -38,15 +41,31 @@ app.include_router(playlist.router)
 
 # Gestisci i path m3u/m3u8 anche con sottopercorsi
 @app.get("/m3u/{path:path}")
-async def m3u_catchall(path: Annotated[str, Path()]) -> Response:
+async def m3u_catchall(
+    path: Annotated[str, Path()],
+    rss_service: Annotated[RSSService, Depends(get_rss_service)],
+    feeds: Annotated[list[RSSFeed], Depends(get_rss_feeds)],
+    config: Annotated[AppConfig, Depends(get_config)],
+) -> Response:
     """Cattura tutti i percorsi che iniziano con /m3u/ e restituisce la playlist."""
-    return await playlist.get_m3u_with_path(path)
+    playlist_content = await playlist._generate_playlist(
+        rss_service, feeds, config, format_type="m3u"
+    )
+    return PlainTextResponse(content=playlist_content)
 
 
 @app.get("/m3u8/{path:path}")
-async def m3u8_catchall(path: Annotated[str, Path()]) -> Response:
+async def m3u8_catchall(
+    path: Annotated[str, Path()],
+    rss_service: Annotated[RSSService, Depends(get_rss_service)],
+    feeds: Annotated[list[RSSFeed], Depends(get_rss_feeds)],
+    config: Annotated[AppConfig, Depends(get_config)],
+) -> Response:
     """Cattura tutti i percorsi che iniziano con /m3u8/ e restituisce la playlist."""
-    return await playlist.get_m3u8_with_path(path)
+    playlist_content = await playlist._generate_playlist(
+        rss_service, feeds, config, format_type="m3u8"
+    )
+    return PlainTextResponse(content=playlist_content)
 
 
 if __name__ == "__main__":

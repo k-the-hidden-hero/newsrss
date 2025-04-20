@@ -64,6 +64,15 @@ strict_optional = true
 warn_redundant_casts = true
 warn_return_any = true
 warn_unused_ignores = true
+ignore_missing_imports = true
+implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = ["dynaconf.*", "feedparser.*"]
+ignore_missing_imports = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+warn_return_any = false
 
 [[tool.mypy.overrides]]
 module = ["fastapi.*"]
