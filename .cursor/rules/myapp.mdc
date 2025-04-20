@@ -1,0 +1,68 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+Let's plan the application before start. Ask me question if you need clarification.
+
+## Scope
+
+The scope of the API is to give an always updated m3u list of audio files.
+This audio files are podcasts or news that are updated by the day from various RSS sources
+The source for these files is trought multiple RSS feed that will need to be scraped and extracted only the latest value.
+
+## Functionality
+- I want to build an API that will run in a container.
+- I should be able to be hosted will be hosted in CloudRun or in Kubernetes.
+- The API will be built on Fastapi framework.
+- The configuration for this application will be in TOML format.
+- I want this application to be able to run in both persistent and non persistent environments.
+- The basic configurations will be passed via env variables
+- Via the env configuration we will know where the configuration file is
+- In the TOML file I expect to be able to put the list of RSS feeds
+- The list is an ordered list and the m3u sorting will respect that order
+- The application is cloud oriented and the code uses asyncio to work in a asyncronous way.
+
+## The caching:
+the cache is not needed
+
+# Configuration content:
+
+- The RSS feeds.
+  - The list is ordered. The m3u will respect this order.
+  - The Description of the feed
+  - A numeric id (this can be used to identify the RSS and his)
+  - Timeout for the feed
+- use the library dynaconf https://www.dynaconf.com/ to manage the configuration in that way we can use environment variable or file interchangeably.
+
+## The endpoints
+- / : It reply a nice html page with the statistics on each RSS feed:
+  - Use tailwind css for the styling
+  - Name of the RSS feed (this is also a link to the feed)
+  - Description of the feed
+  - Last successful scrape
+  - Last scrape duration
+  - Last episode scraped
+  - Duration of the episode
+  - Link to the episode.
+  - This page has nice pagination and CSS.
+  - Use MDI icons or emoji
+- /m3u: This reply with a perfectly formatted m3u playlist.
+  - Calling /m3u or anything after /m3u/* will alway reply with the same contents.
+- /m3u8: This reply with a perfectly formatted m3u8 playlist.
+  - Calling /m3u8 or anything after /m3u8/* will alway reply with the same contents.
+
+## General rules:
+- Static content for the html pages have to stay in /static
+- Scripts/JS and CSS will be reused if html pages are present
+- Do not place CSS or JS directly in html or in templates but include it from /static/js or /static/css or appropriated path.
+- Include debug logging
+- The log verbosity is managed via environment variable or toml configuration. (ENV var has precedence)
+- use skaffold for the development
+- Use poetry
+- Use Dockerfile
+
+## Default values (all those values must be customizable):
+- Retry for scraping 3
+- Timeout for scraping 20seconds
+- Max m3u/m3u8 time for scraping 30 seconds

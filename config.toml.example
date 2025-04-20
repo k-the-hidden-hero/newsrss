@@ -1,0 +1,47 @@
+# Esempio di configurazione per NewsM3U
+# Rinominare in config.toml per utilizzare
+
+[app]
+# Impostazioni generali dell'applicazione
+debug = false                # Attiva il logging di debug
+max_timeout = 30             # Timeout massimo (secondi) per la generazione delle playlist
+retry_count = 3              # Numero di tentativi per recuperare un feed
+scrape_timeout = 20          # Timeout (secondi) per il recupero di un singolo feed
+
+# Definizione dei feed RSS
+# L'ordine dei feed qui definito sarà rispettato nella playlist m3u/m3u8
+
+[[feeds]]
+id = 1
+name = "Radio RAI 1"
+description = "Giornale Radio RAI 1"
+url = "https://www.raiplaysound.it/programmi/gr1.xml"
+timeout = 15                 # Timeout specifico per questo feed (sovrascrive scrape_timeout)
+
+[[feeds]]
+id = 2
+name = "Radio RAI 2"
+description = "Giornale Radio RAI 2"
+url = "https://www.raiplaysound.it/programmi/gr2.xml"
+timeout = 15
+
+[[feeds]]
+id = 3
+name = "Radio RAI 3"
+description = "Giornale Radio RAI 3"
+url = "https://www.raiplaysound.it/programmi/gr3.xml"
+timeout = 15
+
+[[feeds]]
+id = 4
+name = "Radio 24"
+description = "Giornale Radio 24"
+url = "https://www.radio24.ilsole24ore.com/podcast-rss/gr24.xml"
+timeout = 20
+
+[[feeds]]
+id = 5
+name = "BBC News"
+description = "BBC World Service News"
+url = "https://podcasts.files.bbci.co.uk/p02nq0gn.rss"
+timeout = 25

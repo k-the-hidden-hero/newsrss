@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsRSS - Statistiche Feed</title>
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/style.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css">
+</head>
+<body class="retro-grid-dark">
+    <div class="header tape-deck">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-2">
+                <h1 class="text-white text-xl font-bold flex items-center">
+                    <i class="mdi mdi-radio-tower text-2xl mr-2 glow-text"></i>
+                    <span class="text-vaporwave-yellow">News</span><span class="text-vaporwave-cyan">RSS</span>
+                    <span class="text-xs ml-2 bg-black/30 rounded px-2 py-1">v0.1.0</span>
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="section-title flex items-center">
+                <i class="mdi mdi-chart-bar text-3xl mr-2 text-vaporwave-neon"></i>
+                Statistiche Feed RSS
+                <span class="text-vaporwave-orange ml-2">📻</span>
+            </h1>
+            <button id="refresh-all" class="refresh-button px-4 py-2 rounded flex items-center refresh-btn">
+                <i class="mdi mdi-refresh text-xl mr-2"></i>
+                Aggiorna tutti i feed
+                <span class="loading-spinner"></span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for feed in feeds %}
+            <div class="feed-card relative overflow-hidden" data-feed-id="{{ feed.feed_id }}">
+                <div class="flex items-center mb-3">
+                    <img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url={{ feed.url }}&size=32" alt="{{ feed.name }}" class="feed-icon" onerror="this.src='/static/images/rss-default.svg'; this.onerror='';">
+                    <h2 class="text-xl font-semibold text-vaporwave-cyan"><a href="{{ feed.url }}" class="hover:text-vaporwave-neon transition-colors">{{ feed.name }}</a></h2>
+                </div>
+                <p class="card-description mt-2">{{ feed.description }}</p>
+
+                <div class="mt-4">
+                    <p class="mb-1 flex items-center">
+                        <i class="mdi mdi-clock-outline text-vaporwave-blue mr-2"></i>
+                        <span class="font-medium">Ultimo scraping:</span>
+                        <span class="last-scrape ml-1">{{ feed.last_scrape }}</span>
+                    </p>
+                    <p class="mb-1 flex items-center">
+                        <i class="mdi mdi-timer-outline text-vaporwave-orange mr-2"></i>
+                        <span class="font-medium">Durata:</span>
+                        <span class="last-duration ml-1">{{ feed.last_duration }}s</span>
+                    </p>
+                    <p class="mb-1 flex items-center">
+                        <i class="mdi mdi-check-circle-outline text-vaporwave-teal mr-2"></i>
+                        <span class="font-medium">Stato:</span>
+                        <span class="status ml-1 {% if feed.success %}text-green-400{% else %}text-red-400{% endif %}">
+                            {% if feed.success %}✅ Successo{% else %}❌ Fallimento{% endif %}
+                        </span>
+                    </p>
+
+                    {% if feed.last_episode %}
+                    <div class="latest-episode">
+                        <h3 class="font-semibold mb-2 flex items-center">
+                            <i class="mdi mdi-podcast text-vaporwave-neon mr-2"></i>
+                            Ultimo episodio <span class="text-xs ml-1">🎧</span>
+                            {% if feed.episode_duration %}
+                            <span class="duration-badge ml-2">{{ feed.episode_duration }}</span>
+                            {% endif %}
+                        </h3>
+                        <p class="flex items-start mb-2">
+                            <i class="mdi mdi-format-title text-vaporwave-blue mr-2 mt-1"></i>
+                            <span class="font-medium">Titolo:</span>
+                            <span class="episode-title ml-1">{{ feed.last_episode }}</span>
+                        </p>
+
+                        {% if feed.episode_author %}
+                        <p class="flex items-start mb-2">
+                            <i class="mdi mdi-account text-vaporwave-pink mr-2 mt-1"></i>
+                            <span class="font-medium">Autore:</span>
+                            <span class="episode-author ml-1">{{ feed.episode_author }}</span>
+                        </p>
+                        {% endif %}
+
+                        {% if feed.episode_url %}
+                        <p class="flex items-start mt-3">
+                            <a href="{{ feed.episode_url }}" target="_blank" class="audio-link">
+                                <i class="mdi mdi-play-circle-outline text-xl mr-1"></i>
+                                Riproduci episodio
+                                <i class="mdi mdi-arrow-right text-sm ml-1"></i>
+                            </a>
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="latest-episode" style="display: none;">
+                        <h3 class="font-semibold mb-2 flex items-center">
+                            <i class="mdi mdi-podcast text-vaporwave-neon mr-2"></i>
+                            Ultimo episodio <span class="text-xs ml-1">🎧</span>
+                            <span class="duration-badge ml-2 episode-duration" style="display: none;"></span>
+                        </h3>
+                        <p class="flex items-start mb-2">
+                            <i class="mdi mdi-format-title text-vaporwave-blue mr-2 mt-1"></i>
+                            <span class="font-medium">Titolo:</span>
+                            <span class="episode-title ml-1"></span>
+                        </p>
+
+                        <p class="flex items-start mb-2 episode-author-container" style="display: none;">
+                            <i class="mdi mdi-account text-vaporwave-pink mr-2 mt-1"></i>
+                            <span class="font-medium">Autore:</span>
+                            <span class="episode-author ml-1"></span>
+                        </p>
+
+                        <p class="flex items-start mt-3 episode-url-container" style="display: none;">
+                            <a href="#" target="_blank" class="audio-link episode-url">
+                                <i class="mdi mdi-play-circle-outline text-xl mr-1"></i>
+                                Riproduci episodio
+                                <i class="mdi mdi-arrow-right text-sm ml-1"></i>
+                            </a>
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <button class="refresh-button px-3 py-1 rounded text-sm flex items-center refresh-feed refresh-btn" data-feed-id="{{ feed.feed_id }}">
+                            <i class="mdi mdi-refresh text-lg mr-1"></i>
+                            Aggiorna
+                            <span class="loading-spinner"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container mx-auto">
+            <div class="flex justify-center space-x-8">
+                <a href="/m3u/playlyst.m3u" class="text-vaporwave-cyan hover:text-vaporwave-neon transition-colors flex items-center">
+                    <i class="mdi mdi-playlist-music text-xl mr-1"></i> M3U Playlist
+                </a>
+                <a href="/m3u8/playlist.m3u8" class="text-vaporwave-cyan hover:text-vaporwave-neon transition-colors flex items-center">
+                    <i class="mdi mdi-playlist-play text-xl mr-1"></i> M3U8 Playlist
+                </a>
+            </div>
+            <div class="mt-2 text-xs text-vaporwave-teal/70">
+                <span class="flex items-center justify-center">
+                    <i class="mdi mdi-palm-tree text-lg mr-1 retro-palm"></i>
+                    Vaporwave RSS vibes
+                    <i class="mdi mdi-palm-tree text-lg ml-1 retro-palm"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay di caricamento -->
+    <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Notifica -->
+    <div id="notification"></div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/refresh.js"></script>
+</body>
+</html>

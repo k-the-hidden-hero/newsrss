@@ -1,0 +1,30 @@
+[default]
+# Configurazione base
+debug = true
+log_level = "DEBUG"
+max_scrape_time = 60
+max_retries = 5
+scrape_timeout = 40
+
+# Configurazione RSS feeds
+[[rss_feeds]]
+id = 1
+name = "Radio24 News"
+description = "Radio 24 Notizie"
+url = "https://www.spreaker.com/show/4311383/episodes/feed"
+timeout = 40
+
+
+[[rss_feeds]]
+id = 4
+name = "RTL 102.5"
+description = "Giornale Orario di RTL 102.5"
+url = "https://rss.rtl.it/podcast/giornale-orario/?mediaType=201"
+timeout = 40
+
+[[rss_feeds]]
+id = 5
+name = "Radio Capital News"
+description = "Giornale Orario di Capital News"
+url = "https://www.capital.it/api/pub/v1/rss/google-assistant/833%22%20type=%22rss%22%20text=%22Capital%20News%20GR%22"
+timeout = 40

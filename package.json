@@ -1,0 +1,12 @@
+{
+  "name": "newsrss",
+  "version": "0.1.0",
+  "description": "API for managing RSS feeds and generating m3u playlists",
+  "scripts": {
+    "build:css": "tailwindcss -i ./newsrss/static/css/tailwind/tailwind.css -o ./newsrss/static/css/style.min.css --minify",
+    "watch:css": "tailwindcss -i ./newsrss/static/css/tailwind/tailwind.css -o ./newsrss/static/css/style.min.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}
