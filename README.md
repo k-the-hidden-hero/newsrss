@@ -35,7 +35,7 @@ docker pull ghcr.io/k-the-hidden-hero/newsrss:latest
 ## Quick Usage
 
 ```bash
-docker run -p 8000:8000 -v /path/to/config.toml:/app/config.toml ghcr.io/k-the-hidden-hero/newsrss:latest
+docker run -p 8000:8000 -v /path/to/settings.toml:/app/settings.toml ghcr.io/k-the-hidden-hero/newsrss:latest
 ```
 
 ## Configuration
@@ -130,15 +130,16 @@ spec:
   source:
     chart: application
     repoURL: https://stakater.github.io/stakater-charts
-    targetRevision: 6.0.3
+    targetRevision: 6.0.2
     helm:
-      values: |
+      releaseName: newsrss
+      valuesObject:
         applicationName: newsrss
 
         deployment:
           image:
             repository: ghcr.io/k-the-hidden-hero/newsrss
-            tag: latest
+            tag: 0.4.0
 
           env:
             NEWSRSS_DEBUG:
@@ -150,7 +151,7 @@ spec:
             NEWSRSS_SCRAPE_TIMEOUT:
               value: "40"
             NEWSRSS_CONFIG_PATH:
-              value: "/app/config.toml"
+              value: "/app/settings.toml"
 
           volumes:
             config:
@@ -159,24 +160,24 @@ spec:
 
           volumeMounts:
             config:
-              mountPath: /app/config.toml
-              subPath: config.toml
+              mountPath: /app/settings.toml
+              subPath: settings.toml
 
           readinessProbe:
             enabled: true
             httpGet:
               path: /
               port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
 
           livenessProbe:
             enabled: true
             httpGet:
               path: /
               port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 60
+            initialDelaySeconds: 5
+            periodSeconds: 300
 
           resources:
             requests:
@@ -188,21 +189,21 @@ spec:
 
           containerSecurityContext:
             readOnlyRootFilesystem: false
-            runAsNonRoot: true
+            runAsNonRoot: false
 
         service:
           enabled: true
           ports:
-            http:
-              port: 80
-              targetPort: 8000
-              protocol: TCP
+          - name: http
+            port: 80
+            targetPort: 8000
+            protocol: TCP
 
         configMap:
           enabled: true
           files:
             config:
-              config.toml: |
+              settings.toml: |
                 # Base configuration
                 debug = false
                 log_level = "info"
@@ -236,12 +237,16 @@ spec:
           enabled: true
           className: nginx
           annotations:
-            nginx.ingress.kubernetes.io/rewrite-target: /
+            cert-manager.io/cluster-issuer: cloudflare
           hosts:
-            - host: newsrss.example.com
+            - host: newsrss.mydomain.dev
               paths:
                 - path: /
                   pathType: Prefix
+          tls:
+            - hosts:
+              - newsrss.mydomain.dev
+              secretName: newsrss-ingress-tls
 
   destination:
     server: https://kubernetes.default.svc
@@ -251,6 +256,18 @@ spec:
     automated:
       prune: true
       selfHeal: true
+      allowEmpty: true
     syncOptions:
-      - CreateNamespace=true
+    - CreateNamespace=true
+  ignoreDifferences:
+  - group: "apps"
+    kind: Deployment
+    jsonPointers:
+    - /spec/template/spec/hostUsers
+  - group: ""
+    kind: Secret
+    jsonPointers:
+    - /data
+    - /stringData
+
 ```
