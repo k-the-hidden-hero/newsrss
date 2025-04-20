@@ -1,9 +1,9 @@
-# NewsM3U
+# newsrss
 
-[![Code Quality](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/code-quality.yml/badge.svg)](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/code-quality.yml)
-[![Build and Release](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/k-the-hidden-hero/newsm3u/actions/workflows/build-and-release.yml)
+[![Code Quality](https://github.com/k-the-hidden-hero/newsrss/actions/workflows/code-quality.yml/badge.svg)](https://github.com/k-the-hidden-hero/newsrss/actions/workflows/code-quality.yml)
+[![Build and Release](https://github.com/k-the-hidden-hero/newsrss/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/k-the-hidden-hero/newsrss/actions/workflows/build-and-release.yml)
 [![License: WTFPL](https://img.shields.io/badge/License-WTFPL-brightgreen.svg)](http://www.wtfpl.net/about/)
-[![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/k-the-hidden-hero/newsm3u)](https://github.com/k-the-hidden-hero/newsm3u/pkgs/container/newsm3u)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/k-the-hidden-hero/newsrss)](https://github.com/k-the-hidden-hero/newsrss/pkgs/container/newsrss)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-311/)
 
 
@@ -22,7 +22,7 @@ An API that provides always up-to-date M3U and M3U8 playlists of audio files fro
 The container image is available on GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/k-the-hidden-hero/newsm3u:latest
+docker pull ghcr.io/k-the-hidden-hero/newsrss:latest
 ```
 
 ### Available Tags
@@ -35,7 +35,7 @@ docker pull ghcr.io/k-the-hidden-hero/newsm3u:latest
 ## Quick Usage
 
 ```bash
-docker run -p 8000:8000 -v /path/to/config.toml:/app/config.toml ghcr.io/k-the-hidden-hero/newsm3u:latest
+docker run -p 8000:8000 -v /path/to/config.toml:/app/config.toml ghcr.io/k-the-hidden-hero/newsrss:latest
 ```
 
 ## Configuration
@@ -102,8 +102,8 @@ timeout = 40
 
 ```bash
 # Clone the repository
-git clone https://github.com/k-the-hidden-hero/newsm3u.git
-cd newsm3u
+git clone https://github.com/k-the-hidden-hero/newsrss.git
+cd newsrss
 
 # Install dependencies with Poetry
 poetry install
@@ -116,4 +116,141 @@ npm run build:css
 
 # Start the application in development mode
 poetry run uvicorn newsrss.main:app --reload
+```
+
+## ArgoCD Application example:
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: newsrss
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: application
+    repoURL: https://stakater.github.io/stakater-charts
+    targetRevision: 6.0.3
+    helm:
+      values: |
+        applicationName: newsrss
+
+        deployment:
+          image:
+            repository: ghcr.io/k-the-hidden-hero/newsrss
+            tag: latest
+
+          env:
+            NEWSRSS_DEBUG:
+              value: "false"
+            NEWSRSS_MAX_TIMEOUT:
+              value: "60"
+            NEWSRSS_RETRY_COUNT:
+              value: "5"
+            NEWSRSS_SCRAPE_TIMEOUT:
+              value: "40"
+            NEWSRSS_CONFIG_PATH:
+              value: "/app/config.toml"
+
+          volumes:
+            config:
+              configMap:
+                name: newsrss-config
+
+          volumeMounts:
+            config:
+              mountPath: /app/config.toml
+              subPath: config.toml
+
+          readinessProbe:
+            enabled: true
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+
+          livenessProbe:
+            enabled: true
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 60
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+
+          containerSecurityContext:
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+
+        service:
+          enabled: true
+          ports:
+            http:
+              port: 80
+              targetPort: 8000
+              protocol: TCP
+
+        configMap:
+          enabled: true
+          files:
+            config:
+              config.toml: |
+                # Base configuration
+                debug = false
+                log_level = "info"
+                max_scrape_time = 60
+                max_retries = 5
+                scrape_timeout = 40
+
+                # RSS feeds configuration
+                [[rss_feeds]]
+                id = 1
+                name = "Radio24 News"
+                description = "Radio 24 News"
+                url = "https://www.spreaker.com/show/4311383/episodes/feed"
+                timeout = 40
+
+                [[rss_feeds]]
+                id = 4
+                name = "RTL 102.5"
+                description = "RTL 102.5 Hourly News"
+                url = "https://rss.rtl.it/podcast/giornale-orario/?mediaType=201"
+                timeout = 40
+
+                [[rss_feeds]]
+                id = 5
+                name = "Radio Capital News"
+                description = "Capital News Hourly Report"
+                url = "https://www.capital.it/api/pub/v1/rss/google-assistant/833%22%20type=%22rss%22%20text=%22Capital%20News%20GR%22"
+                timeout = 40
+
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            nginx.ingress.kubernetes.io/rewrite-target: /
+          hosts:
+            - host: newsrss.example.com
+              paths:
+                - path: /
+                  pathType: Prefix
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: newsrss
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 ```
