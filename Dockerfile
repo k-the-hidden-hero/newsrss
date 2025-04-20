@@ -39,10 +39,9 @@ COPY --from=tailwind-builder /build/newsrss/static/css/style.min.css ./newsrss/s
 ENV PYTHONPATH=/app
 ENV NEWSRSS_ENV=production
 
-RUN apk add bash
 # Create non-root user
-RUN adduser --disabled-password --gecos "" appuser
-USER appuser
+RUN adduser --disabled-password --gecos "" --uid 999 appuser
+USER 999
 
 # Expose port
 EXPOSE 8000
