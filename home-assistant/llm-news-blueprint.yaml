@@ -138,88 +138,77 @@ variables:
     {% endif %}
 
 sequence:
-- alias: Check if we have a valid player
+- alias: Play news or advise no news found
   if:
   - condition: template
-    value_template: "{{ target_player != none }}"
+    value_template: "{{ state_attr(news_entity, 'episodes') | count > 0 }}"
+    alias: Check if there are news
   then:
-  - alias: Check if there are news episodes
-    if:
-    - condition: template
-      value_template: "{{ episodes_list | count > 0 }}"
-      alias: Check if there are news episodes
-    then:
-    - data:
-        scene_id: "{{ snapshot_name }}"
-        snapshot_entities:
-        - "{{ target_player }}"
-      action: scene.create
-      alias: Save the player state
-    - target:
-        entity_id: "{{ target_player }}"
-      action: media_player.media_stop
-      alias: Stop the player
-    - alias: Cycle through news episodes
-      repeat:
-        sequence:
-        - variables:
-            current_episode: "{{ episodes_list[repeat.index - 1] }}"
-            feed_name: "{{ current_episode.feed_name | default(unknown_feed_text) }}"
-            episode_title: >-
-              {{ current_episode.episode_title | default('Unknown Title') }}
-            url_episode: "{{ current_episode.episode_url }}"
-            duration: "{{ current_episode.duration }}"
-          alias: Set Variables
-        - action: "{{ tts_service }}"
-          target:
-            entity_id: "{{ tts_service }}"
-          data:
-            media_player_entity_id: "{{ target_player }}"
-            message: "{{feed_name}} {{ episode_title }}"
-          alias: Announce episode title
-        - action: media_player.play_media
-          target:
-            entity_id: "{{ target_player }}"
-          data:
-            media_content_id: "{{ url_episode }}"
-            media_content_type: audio/mpeg
-            enqueue: replace
-          alias: Play the news
-        - wait_for_trigger:
-          - trigger: state
-            entity_id:
-            - "{{ target_player }}"
-            from: null
-            to:
-            - paused
-            - stopped
-            - idle
-            for:
-              seconds: 1
-          timeout: "{{ duration }}"
-          alias: Wait for the player to finish
-        count: "{{ episodes_list | count }}"
-    - action: "{{ tts_service }}"
-      target:
-        entity_id: "{{ tts_service }}"
-      data:
-        media_player_entity_id: "{{ target_player }}"
-        message: "{{ end_news_text }}"
-      alias: Announce end of news
-    - target:
-        entity_id: scene.{{ snapshot_name }}
-      action: scene.turn_on
-      alias: Restore Player state
-    - respond_to_conversation:
-        message: "Playing the latest news in {{ response_area }}."
-    else:
-    - action: "{{ tts_service }}"
-      data:
-        entity_id: "{{ target_player }}"
-        message: "{{ no_news_text }}"
-      alias: No news to play
-    - respond_to_conversation:
-        message: "I couldn't find any news episodes to play."
+  - data:
+      scene_id: "{{ snapshot_name }}"
+      snapshot_entities:
+      - "{{ target_player }}"
+    action: scene.create
+    alias: Save the player state
+  - target:
+      entity_id: "{{ target_player }}"
+    action: media_player.media_stop
+    alias: Stop the player.
+  - alias: Cycle on news episodes
+    repeat:
+      sequence:
+      - variables:
+          current_episode: "{{ episodes_list[repeat.index - 1] }}"
+          feed_name: "{{ current_episode.feed_name | default(unknown_feed) }}"
+          episode_title: >-
+            {{ current_episode.episode_title | default('Titolo sconosciuto') }}
+          url_episode: "{{ current_episode.episode_url }}"
+          duration: "{{ current_episode.duration }}"
+        alias: Set Variables
+      - action: tts.speak
+        target:
+          entity_id: "{{ tts_service }}"
+        data:
+          media_player_entity_id: "{{ target_player }}"
+          message: "{{feed_name}} {{ episode_title }}"
+        alias: Announce episode title
+      - action: media_player.play_media
+        target:
+          entity_id: "{{ target_player }}"
+        data:
+          media_content_id: "{{ url_episode }}"
+          media_content_type: audio/mpeg
+          enqueue: replace
+        alias: Play the news
+      - wait_for_trigger:
+        - trigger: state
+          entity_id:
+          - media_player.soggiorno
+          from: null
+          to:
+          - paused
+          - stopped
+          - idle
+          for:
+            seconds: 1
+        timeout: "{{ duration }}"
+        alias: Wait for the player to finish
+      count: "{{ episodes_list | count }}"
+  - action: tts.speak
+    target:
+      entity_id: "{{ tts_service }}"
+    data:
+      media_player_entity_id: "{{ target_player }}"
+      message: "{{ end_news }}"
+    alias: Announce end of news.
+  - target:
+      entity_id: scene.{{ snapshot_name }}
+    action: scene.turn_on
+    alias: Restore Player state
   else:
-  - respond_to_conversation:
-      message: "I couldn't find an appropriate media player in the specified area. Please specify a valid area with a media player."
+  - data:
+      entity_id: "{{ target_player }}"
+      message: Nessuna news
+    action: "{{ tts_service }}"
+    enabled: true
+    alias: No news to play
