@@ -4,7 +4,6 @@ blueprint:
     Creates a script to play the latest news episodes via voice commands. This tool can be used by LLM assistants to handle natural language requests like "play the latest news" or "tell me the news" in a specific area or media player.
   domain: script
   source_url: https://github.com/k-the-hidden-hero/newsrss/blob/main/home-assistant/llm-news-blueprint.yaml
-  # Comment
   input:
     news_sensor:
       name: News Sensor
@@ -15,11 +14,15 @@ blueprint:
       default: sensor.news
     invalid_target_text:
       name: Invalid Target Text
+      selector:
+        text:
       description: Text to use when no valid target is found
       default: Unable to find valid target
     no_episodes_text:
       name: No Episodes Text
       description: Text to use when no episodes are found
+      selector:
+        text:
       default: No episodes found
     default_player:
       name: Default Player
@@ -44,6 +47,8 @@ blueprint:
       name: Snapshot Name
       description: Name to use for media player state snapshot
       default: news_snapshot
+      selector:
+        text:
     prompt_description:
       name: Tool Description for LLM
       description: Description that will be shown to the LLM to understand when to use this tool
@@ -58,22 +63,30 @@ blueprint:
         text:
       default: >
         The area where the news should be played. If not provided, will use the area where the request originated from, or the default player if area detection fails.
-      unknown_feed_text:
-        name: Unknown Feed Text
-        description: Text to use when a feed has no name
-        default: Unknown Feed
-      unknown_episode_text:
-        name: Unknown Episode Text
-        description: Text to use when an episode has no title
-        default: Unknown Episode
+    unknown_feed_text:
+      name: Unknown Feed Text
+      description: Text to use when a feed has no name
+      default: Unknown Feed
+      selector:
+        text:
+    unknown_episode_text:
+      name: Unknown Episode Text
+      description: Text to use when an episode has no title
+      default: Unknown Episode
+      selector:
+        text:
     end_news_text:
       name: End News Text
       description: Text to announce when all news episodes have finished playing
       default: End of news.
+      selector:
+        text:
     no_news_text:
       name: No News Text
       description: Text to announce when no news episodes are available
       default: No news available.
+      selector:
+        text:
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
@@ -183,12 +196,10 @@ sequence:
   then:
     - data:
         scene_id: "{{ snapshot_name }}"
-        snapshot_entities:
-        - "{{ target_player }}"
+        snapshot_entities: '{{ dict(target_data.items() | rejectattr(''1'', ''eq'', ''NA'')) }}'
       action: scene.create
       alias: Save the player state
-    - target:
-        entity_id: "{{ target_player }}"
+    - target: '{{ dict(target_data.items() | rejectattr(''1'', ''eq'', ''NA'')) }}'
       action: media_player.media_stop
       alias: Stop the player.
     - alias: Cycle on news episodes
@@ -206,12 +217,11 @@ sequence:
           target:
             entity_id: "{{ tts_service }}"
           data:
-            media_player_entity_id: "{{ target_player }}"
+            media_player_entity_id: "{{ default_player }}"
             message: "{{feed_name}} {{ episode_title }}"
           alias: Announce episode title
         - action: media_player.play_media
-          target:
-            entity_id: "{{ target_player }}"
+          target: '{{ dict(target_data.items() | rejectattr(''1'', ''eq'', ''NA'')) }}'
           data:
             media_content_id: "{{ url_episode }}"
             media_content_type: audio/mpeg
@@ -219,8 +229,7 @@ sequence:
           alias: Play the news
         - wait_for_trigger:
           - trigger: state
-            entity_id:
-            - media_player.soggiorno
+            entity_id: '{{ dict(target_data.items() | rejectattr(''1'', ''eq'', ''NA'')) }}'
             from: null
             to:
             - paused
@@ -235,7 +244,7 @@ sequence:
       target:
         entity_id: "{{ tts_service }}"
       data:
-        media_player_entity_id: "{{ target_player }}"
+        media_player_entity_id: "{{ default_player }}"
         message: "{{ end_news }}"
       alias: Announce end of news.
     - target:
