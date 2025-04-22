@@ -13,13 +13,27 @@ blueprint:
         entity:
           domain: sensor
       default: sensor.news
+    invalid_target_text:
+      name: Invalid Target Text
+      description: Text to use when no valid target is found
+      default: Unable to find valid target
+    no_episodes_text:
+      name: No Episodes Text
+      description: Text to use when no episodes are found
+      default: No episodes found
     default_player:
-      name: Default Media Player
-      description: Default media player to use when no area is specified and area detection fails
+      name: Default Player
+      description: 'The default Music Assistant player which will be used if it is not clear from the request in which area or on which player the request should be played.
+
+        Leave empty if you do not want a default player.'
       selector:
         entity:
-          domain: media_player
-      default: media_player.living_room
+          filter:
+          - integration: music_assistant
+            domain:
+            - media_player
+          multiple: false
+      default:
     tts_service:
       name: TTS Service
       description: Text-to-speech service to use for announcements
@@ -44,10 +58,14 @@ blueprint:
         text:
       default: >
         The area where the news should be played. If not provided, will use the area where the request originated from, or the default player if area detection fails.
-    unknown_feed_text:
-      name: Unknown Feed Text
-      description: Text to use when a feed has no name
-      default: Unknown Feed
+      unknown_feed_text:
+        name: Unknown Feed Text
+        description: Text to use when a feed has no name
+        default: Unknown Feed
+      unknown_episode_text:
+        name: Unknown Episode Text
+        description: Text to use when an episode has no title
+        default: Unknown Episode
     end_news_text:
       name: End News Text
       description: Text to announce when all news episodes have finished playing
@@ -56,159 +74,174 @@ blueprint:
       name: No News Text
       description: Text to announce when no news episodes are available
       default: No news available.
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to fine-tune the prompts for your specific LLM (model).  In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        area_prompt:
+          name: Area Prompt
+          description: The prompt that the LLM will use to provide the area.
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: 'The area or areas for which the music is requested. If the request does not mention a target (either an area or a player), use the area the request comes from.
 
+            If the area can not be determined from the request, or the device the request comes from, do not use this parameter.
+
+            Only use both the "area" parameter and the "media_player" parameter together if both are specifically used in the request.'
+        media_player_prompt:
+          name: Media Player Prompt
+          description: The prompt that the LLM will use to provide the media player.
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: 'Only use "media_player" if the request specifically mentions a media player or multiple media players on which to play the music. This has to be the entity_id of a media player provided by the Music Assistant integration.
+
+            Only use both the "area" parameter and the "media_player" parameter together if both are specifically used in the request.'
 mode: restart
 max_exceeded: silent
 
 fields:
   area:
-    description: "{{ area_description }}"
-    example: Living Room
-    required: false
-
-variables:
-  # Blueprint inputs
-  news_sensor: !input news_sensor
-  default_player: !input default_player
-  tts_service: !input tts_service
-  snapshot_name: !input snapshot_name
-  unknown_feed_text: !input unknown_feed_text
-  end_news_text: !input end_news_text
-  no_news_text: !input no_news_text
-
-  # Runtime variables
-  target_area: "{{ area }}"
-  # Get all players in Home Assistant
-  all_players: >
-    {% set players = namespace(list=[]) %} {% for entity_id in states.media_player | map(attribute='entity_id') %}
-      {% if 'media_player.' in entity_id %}
-        {% set players.list = players.list + [entity_id] %}
-      {% endif %}
-    {% endfor %} {{ players.list }}
-
-  # Determine the area the command originated from if available
-  # This is available if a device triggered the conversation
-  origin_area: >
-    {% if device_id | default(none) %}
-      {{ device_attr(device_id, 'area_id') }}
-    {% else %}
-      {{ none }}
-    {% endif %}
-
-  # Find players in the target area
-  target_player: >
-    {% if target_area | default(none) %}
-      {% set area_players = namespace(list=[]) %}
-      {% for entity_id in all_players %}
-        {% set player_area = area_name(area_id(entity_id)) | lower %}
-        {% if player_area == target_area | lower %}
-          {% set area_players.list = area_players.list + [entity_id] %}
-        {% endif %}
-      {% endfor %}
-      {% if area_players.list | count > 0 %}
-        {{ area_players.list[0] }}
-      {% else %}
-        {{ none }}
-      {% endif %}
-    {% elif origin_area | default(none) %}
-      {% set area_players = namespace(list=[]) %}
-      {% for entity_id in all_players %}
-        {% if area_id(entity_id) == origin_area %}
-          {% set area_players.list = area_players.list + [entity_id] %}
-        {% endif %}
-      {% endfor %}
-      {% if area_players.list | count > 0 %}
-        {{ area_players.list[0] }}
-      {% else %}
-        {{ default_player }}
-      {% endif %}
-    {% else %}
-      {{ default_player }}
-    {% endif %}
-
-  # Get episodes list from the news sensor
-  episodes_list: "{{ state_attr(news_sensor, 'episodes') | default([]) }}"
-  response_area: >
-    {% if target_area | default(none) %}
-      {{ target_area }}
-    {% elif origin_area | default(none) %}
-      {{ area_name(origin_area) }}
-    {% else %}
-      the default media player
-    {% endif %}
-
+    selector:
+      area:
+        entity:
+          integration: music_assistant
+          domain: media_player
+        multiple: true
+    name: Area
+    description: !input area_prompt
+  media_player:
+    selector:
+      entity:
+        filter:
+          integration: music_assistant
+          domain: media_player
+        multiple: true
+    name: Media Player
+    description: !input media_player_prompt
+  # Blueprint input
 sequence:
+- variables:
+    version: 20250404
+    default_player: !input default_player
+    news_sensor: !input news_sensor
+    tts_service: !input tts_service
+    snapshot_name: !input snapshot_name
+    unknown_feed_text: !input unknown_feed_text
+    unknown_episode_text: !input unknown_episode_text
+    end_news_text: !input end_news_text
+    no_news_text: !input no_news_text
+    episodes_list: "{{ state_attr(news_sensor, 'episodes') | default([]) }}"
+    shuffle: '{{ shuffle }}'
+    player_data: '{% set ma = integration_entities(''music_assistant'') %}
+
+      {% set ma_names = ma | map(''state_attr'', ''friendly_name'') | list %}
+
+      {% set ns = namespace(players=[]) %} {% for player in media_player | default([],
+      true) %}
+
+      {% if player in ma %}
+
+      {% set ns.players = ns.players + [player] %}
+
+      {% elif player in ma_names %}
+
+      {% set entity = ma | select(''is_state_attr'', ''friendly_name'', player) |
+      list %}
+
+      {% set ns.players = ns.players + entity %}
+
+      {% endif %}
+
+      {% endfor %}
+
+      {{ ns.players }}'
+    target_data:
+      area_id: '{{ area | default(''NA'', true) }}'
+      entity_id: '{{ ''NA'' if area | default and not player_data else (player_data
+        or default_player) | default(''NA'', true) }}'
+    invalid_target:
+      response: !input invalid_target_text
+    no_episodes:
+      response: !input no_episodes_text
+- if:
+  - condition: template
+    value_template: '{{ not (area | default or player_data or default_player) }}'
+  then:
+  - stop: No valid target for Music Assistant Voice script found
+    response_variable: invalid_target
 - alias: Play news or advise no news found
   if:
   - condition: template
     value_template: "{{ state_attr(news_entity, 'episodes') | count > 0 }}"
     alias: Check if there are news
   then:
-  - data:
-      scene_id: "{{ snapshot_name }}"
-      snapshot_entities:
-      - "{{ target_player }}"
-    action: scene.create
-    alias: Save the player state
-  - target:
-      entity_id: "{{ target_player }}"
-    action: media_player.media_stop
-    alias: Stop the player.
-  - alias: Cycle on news episodes
-    repeat:
-      sequence:
-      - variables:
-          current_episode: "{{ episodes_list[repeat.index - 1] }}"
-          feed_name: "{{ current_episode.feed_name | default(unknown_feed) }}"
-          episode_title: >-
-            {{ current_episode.episode_title | default('Titolo sconosciuto') }}
-          url_episode: "{{ current_episode.episode_url }}"
-          duration: "{{ current_episode.duration }}"
-        alias: Set Variables
-      - action: tts.speak
-        target:
-          entity_id: "{{ tts_service }}"
-        data:
-          media_player_entity_id: "{{ target_player }}"
-          message: "{{feed_name}} {{ episode_title }}"
-        alias: Announce episode title
-      - action: media_player.play_media
-        target:
-          entity_id: "{{ target_player }}"
-        data:
-          media_content_id: "{{ url_episode }}"
-          media_content_type: audio/mpeg
-          enqueue: replace
-        alias: Play the news
-      - wait_for_trigger:
-        - trigger: state
-          entity_id:
-          - media_player.soggiorno
-          from: null
-          to:
-          - paused
-          - stopped
-          - idle
-          for:
-            seconds: 1
-        timeout: "{{ duration }}"
-        alias: Wait for the player to finish
-      count: "{{ episodes_list | count }}"
-  - action: tts.speak
-    target:
-      entity_id: "{{ tts_service }}"
-    data:
-      media_player_entity_id: "{{ target_player }}"
-      message: "{{ end_news }}"
-    alias: Announce end of news.
-  - target:
-      entity_id: scene.{{ snapshot_name }}
-    action: scene.turn_on
-    alias: Restore Player state
+    - data:
+        scene_id: "{{ snapshot_name }}"
+        snapshot_entities:
+        - "{{ target_player }}"
+      action: scene.create
+      alias: Save the player state
+    - target:
+        entity_id: "{{ target_player }}"
+      action: media_player.media_stop
+      alias: Stop the player.
+    - alias: Cycle on news episodes
+      repeat:
+        sequence:
+        - variables:
+            current_episode: "{{ episodes_list[repeat.index - 1] }}"
+            feed_name: "{{ current_episode.feed_name | default(unknown_feed_text) }}"
+            episode_title: >-
+              {{ current_episode.episode_title | default(unknown_episode_text) }}
+            url_episode: "{{ current_episode.episode_url }}"
+            duration: "{{ current_episode.duration }}"
+          alias: Set Variables
+        - action: tts.speak
+          target:
+            entity_id: "{{ tts_service }}"
+          data:
+            media_player_entity_id: "{{ target_player }}"
+            message: "{{feed_name}} {{ episode_title }}"
+          alias: Announce episode title
+        - action: media_player.play_media
+          target:
+            entity_id: "{{ target_player }}"
+          data:
+            media_content_id: "{{ url_episode }}"
+            media_content_type: audio/mpeg
+            enqueue: replace
+          alias: Play the news
+        - wait_for_trigger:
+          - trigger: state
+            entity_id:
+            - media_player.soggiorno
+            from: null
+            to:
+            - paused
+            - stopped
+            - idle
+            for:
+              seconds: 1
+          timeout: "{{ duration }}"
+          alias: Wait for the player to finish
+        count: "{{ episodes_list | count }}"
+    - action: tts.speak
+      target:
+        entity_id: "{{ tts_service }}"
+      data:
+        media_player_entity_id: "{{ target_player }}"
+        message: "{{ end_news }}"
+      alias: Announce end of news.
+    - target:
+        entity_id: scene.{{ snapshot_name }}
+      action: scene.turn_on
+      alias: Restore Player state
   else:
-  - data:
-      entity_id: "{{ target_player }}"
-      message: Nessuna news
-    action: "{{ tts_service }}"
-    enabled: true
-    alias: No news to play
+    - stop: No episodes to play
+      response_variable: no_episodes
