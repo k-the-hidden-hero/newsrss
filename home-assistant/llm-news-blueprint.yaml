@@ -3,7 +3,7 @@ blueprint:
   description: >
     Creates a script to play the latest news episodes via voice commands. This tool can be used by LLM assistants to handle natural language requests like "play the latest news" or "tell me the news" in a specific area or media player.
   domain: script
-  source_url: https://github.com/your-username/your-repo
+  source_url: https://github.com/k-the-hidden-hero/newsrss/blob/main/home-assistant/llm-news-blueprint.yaml
   input:
     news_sensor:
       name: News Sensor
